@@ -1,0 +1,67 @@
+{% import "bootstrap/wtf.html" as wtf %}
+
+{% block content %}
+<style>
+ul.navi li {
+	display: inline;
+}
+iframe {
+	width: 100%;
+	height: 80%;
+	border: 0px;
+}
+div.contain {
+	width: 100%;
+}
+div.left-div {
+	float: left;
+	width: 50%;
+	height: auto;
+	overflow: auto;
+}
+div.right-div {
+	float: right;
+	width: 50%;
+	height: auto;
+	overflow: auto;
+}
+</style>
+<ul class="navi">
+{% if current_user.is_authenticated() %}
+	<li>{{ user }} is currently logged in</li>
+    <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
+    {% else %}
+    <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
+    <li><a href="{{ url_for('signup') }}">Sign Up</a></li>
+{% endif %}
+</ul>
+
+{% with messages = get_flashed_messages() %}
+{% endwith %}
+
+{{ form.hidden_tag() }}
+
+<body>
+<div class="contain">
+<div class="left-div">
+<h3>Currently Set Question</h3>
+{{ current.id }}, {{ current.body }}
+
+
+<h3>Add New Question</h3>
+{{ wtf.quick_form(form) }}
+
+<h3>List Of Current Questions</h3>
+<ul class="list-group">
+{% for question in questions %}
+<input type="hidden" value="{{ question.id }}">
+<li>{{ question.body }} | {{ question.id }} | <a href="/set_question/{{ question.id }}">Set</a> /// <a href="/delete_question/{{ question.id }}">Delete</a></li>
+{% endfor %}
+</ul>
+</div>
+
+<div class="right-div"><iframe src="/"></iframe></div>
+</div>
+</body>
+
+{% endblock %}

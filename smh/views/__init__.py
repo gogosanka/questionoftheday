@@ -1,29 +1,38 @@
 from flask import render_template, flash, redirect, session, url_for, request, abort
 from flask.ext.login import login_user, logout_user, current_user, login_required
 from smh import app, db, lm, blogic
-from smh.forms import LoginForm, NameForm, SignupForm, AskForm, VibeMeForm
-from smh.models.models import User, Post, Vibe, Question
+from smh.forms import LoginForm, NameForm, SignupForm, AskForm, VibeMeForm, QuestionForm, ResponseForm, ChangeQuestion
+from smh.models.models import User, Post, Vibe, Question, QOTD, Response
 from datetime import datetime
 from smh.auth import *
 import time
 
-@app.route('/', methods=['GET'])
+@app.route('/admin', methods=['GET'])
+def jeffadmin():
+    return render_template('admindashboard.html')
+
+@app.route('/', methods=['GET', 'POST'])
+#@app.route('/homepage', methods=['GET'])
 def questions():
-    form = VibeMeForm()
+    form = ResponseForm()
     title = "Exploring Social Issues Through Anonymity"
-    qotd = Question.query.filter_by(approved='true').first()
-    user = "Anonymous"
+    question_id = QOTD.query.get(1)
+    question = Question.query.filter_by(id=question_id.qotd).first()
+    user = 'Unregistered'
     if current_user.is_authenticated():
-        user = current_user.nickname
-        return render_template('smh/qotd.html',
-                                title=title,
-                                user=user,
-                                followers=followers,
-                                qotd=qotd,
-                                form=form) 
+        user = User.query.filter_by(nickname=current_user.nickname).first()
+        if request.method == 'POST':
+            question_id = request.form['question_id']
+            responder = request.form['responder']
+            response = request.form['response']
+            blogic.add_response(question_id, responder, response)
+            flash('Responded successfully!')
+            return redirect(url_for('questions'))
+    if question:
+        return render_template('smh/qotd.html', title=title, user=user, question=question, form=form)
     return render_template('smh/qotd.html',
                                 title=title,
-                                questions=questions)
+                                user=user)
 
 @app.route('/questions', methods=['GET', 'POST'])
 @login_required
@@ -33,21 +42,63 @@ def send():
     if body:
         if author:
             blogic.ask(body,author,title)
-            flash("created post successfully!")
+            flash("submitted question successfully!")
             return redirect(url_for('questions', nickname=current_user.nickname))
     else:
         return render_template('404.html')
 
-@app.route('/admin/allusers', methods=['GET'])
-@login_required
-def allusers():
-    users = User.query.all()
-    return render_template('admin/allusers.html', users=users)
 
-@app.route('/error')
+@app.route('/xyadmin', methods=['GET', 'POST'])
+@login_required
+def admindash():
+    admin = User.query.filter_by(nickname='gogosanka').first()
+    user = admin.nickname
+    form = QuestionForm()
+    questions = Question.query.all()
+    question_id = QOTD.query.get(1)
+    current_q = Question.query.filter_by(id=question_id.qotd).first()
+    if current_user.nickname == admin.nickname:
+        if request.method == 'POST':
+            if form.validate_on_submit():
+                body = form.question.data
+                author = current_user.nickname
+                blogic.add_question(body, author)
+                flash('Added question to database!')
+                return redirect(url_for('admindash', user=user, form=form, questions=questions, current=current_q))
+        elif request.method == 'GET':
+            return render_template('admin/admin.html', user=user, form=form, questions=questions, current=current_q)
+    return redirect(url_for('nopage'))
+
+@app.route('/set_question/<question_id>', methods=['GET'])
+@login_required
+def admindash2(question_id):
+    admin = User.query.filter_by(nickname='gogosanka').first()
+    user = admin.nickname
+    question_id = int(question_id)
+    if current_user.nickname == admin.nickname:
+        qotd = QOTD.query.get(1)
+        qotd.set(question_id)
+        flash('Changed question!')
+        return redirect(url_for('admindash'))
+    return redirect(url_for('nopage'))
+
+@app.route('/delete_question/<question_id>', methods=['GET'])
+@login_required
+def admindash3(question_id):
+    admin = User.query.filter_by(nickname='gogosanka').first()
+    user = admin.nickname
+    if current_user.nickname == admin.nickname:
+        blogic.delete_question(question_id)
+        flash('Changed question!')
+        return redirect(url_for('admindash'))
+    return redirect(url_for('nopage'))
+
+
+@app.route('/404')
 @login_required
 def nopage():
-    return render_template('404.html')
+    message = 'four-oh-4-0-y-does-Dis-h4ppen-ta-MI'
+    return render_template('404.html', message=message)
 
 @app.route('/<nickname>/accept/<int:vibeid>', methods=['POST'])
 @login_required
@@ -273,33 +324,6 @@ def new(nickname):
                             user=user,
                             follower=follower)
 
-@app.route('/', methods=['GET'])
-@app.route('/discover', methods=['GET'])
-def discover():
-    feed = Post.query.filter_by(rebin='false', public='true').all()
-    follower = '0 for now' #count for followers. will need to update the db model
-    user = 'Stranger'
-    if current_user.is_authenticated():
-        user = User.query.filter_by(nickname=current_user.nickname).first()
-        posts = Post.query.filter_by(author=user).all()
-        posts_count = Post.query.filter_by(author=user, rebin='false').count()
-        bin_posts = Post.query.filter_by(author=user, rebin='true').all() #all recycled posts object        
-        bin_count = Post.query.filter_by(author=user, rebin='true').count() #recycled posts count
-        #hidden_posts = Post.query.filter_by(author=user, rebin='false', hidden='true').all() #make sure to change blogic so that when hidden items are deleted their status goes back to visible
-        return render_template('home.html',
-                                title="Discover",
-                                user=user,
-                                posts_count=posts_count,
-                                bin_posts=bin_posts,
-                                bin_count=bin_count,
-                                follower=follower,
-                                feed=feed)
-    return render_template('home.html',
-                            title="Discover",
-                            feed=feed,
-                            user=user,
-                            follower=follower)
-
 @app.route('/login', methods=['GET', 'POST'])
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
@@ -321,15 +345,12 @@ def login():
                                 title="Log In",
                                 form=form,
                                 user=user)
-
+@app.route('/logout')
 @auth.route('/logout')
 def logout():
-    try:
-        logout_user()
-        flash('You have been logged out.')
-        return redirect(url_for('discover'))
-    except:
-        return redirect(url_for('discover'))
+    logout_user()
+    flash('You are now logged out.')
+    return redirect(url_for('questions'))
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -344,7 +365,7 @@ def signup():
             blogic.add_user(user)
             login_user(user, form.remember_me.data)
             flash('Account created successfully!')
-            return redirect(request.args.get('next') or url_for('discover'))
+            return redirect(request.args.get('next') or url_for('questions'))
         flash('Username or password is already taken. If this is you please sign in.')
     return render_template('signup.html',
                                 title="Log In",

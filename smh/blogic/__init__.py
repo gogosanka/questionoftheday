@@ -96,9 +96,27 @@ def send_message(sender, message, recipient):
     db.session.add(recipient, message)
     db.session.commit()
 
-def ask(body, author):
+
+#QOTD LOGIC
+
+def add_question(body, author):
     timestamp = datetime.utcnow()
     user = User.query.filter_by(nickname=author).first()
-    entry = Question(body=body, author=user, timestamp=timestamp)
+    entry = body
+    question = Question(body=entry, author=user, timestamp=timestamp)
+    db.session.add(question)
+    db.session.commit()
+
+def delete_question(question_id):
+    question = Question.query.filter_by(id=question_id).first()
+    db.session.delete(question)
+    db.session.commit()
+
+def add_response(question_id,responder,response):
+    '''create a new response to a question.'''
+    created_time = datetime.utcnow()
+    user = User.query.filter_by(nickname=responder).first()
+    question = Question.query.get(question_id)
+    entry = Response(body=response, author=user, question=question, timestamp=created_time)
     db.session.add(entry)
     db.session.commit()

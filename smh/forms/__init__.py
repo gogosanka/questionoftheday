@@ -1,5 +1,5 @@
 from flask.ext.wtf import Form
-from wtforms import StringField, SubmitField, PasswordField, TextField, BooleanField, SelectField
+from wtforms import StringField, SubmitField, PasswordField, TextField, BooleanField, SelectField, HiddenField
 from wtforms.validators import Required, Length, Email, EqualTo
 from datetime import datetime
 from smh.models.models import User as User
@@ -46,4 +46,18 @@ class UserInformation(Form):
     age = TextField('First Name', validators=[Required(), Length(1, 77)])
     city = TextField('First Name', validators=[Required(), Length(1, 77)])
     state = TextField('First Name', validators=[Required(), Length(1, 77)])
+    submit = SubmitField('Send')
+
+class QuestionForm(Form):
+    question = StringField('Question', validators=[Required(), Length(1, 77)])
+    submit = SubmitField('Send')
+
+class ResponseForm(Form):
+    response = StringField('Response', validators=[Required(), Length(1, 77)])
+    question_id = HiddenField()
+    responder = HiddenField()
+    submit = SubmitField('Share Anonymously')
+
+class ChangeQuestion(Form):
+    question_id = StringField('Ender Question ID')
     submit = SubmitField('Send')

@@ -53,6 +53,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(64), index=True, unique=True)
     post = db.relationship('Post', backref='author', lazy='dynamic')
     question = db.relationship('Question', backref='author', lazy='dynamic')
+    responses = db.relationship('Response', backref='author', lazy='dynamic')
     album = db.relationship('Album', backref='author', lazy='dynamic')
     images = db.relationship('Image', backref='author', lazy='dynamic')
     cover = db.relationship('Cover', backref='author', lazy='dynamic')
@@ -230,12 +231,16 @@ class Post(db.Model):
         repre = "%r" % self.body
         return str(repre)
 
+#Upon database creation, make sure to generate the first question in your instance scripts
+#Have the question say something like, "no further questions"
+#Make sure to instruct those who use this boiler plate to change the default question
 class Question(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     approved = db.Column(db.String(5))
     body = db.Column(db.String(500))
     timestamp = db.Column(db.DateTime)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    responses = db.relationship('Response', backref='question', lazy='dynamic')
     question_tags = db.relationship('QuestionTag', secondary = question_tags, backref=db.backref('questions', lazy='dynamic'))
     def hide(self):
         self.approved = 'false'
@@ -245,4 +250,35 @@ class Question(db.Model):
         db.session.commit()
     def __repr__(self):
         repre = "%r" % self.body
+        return str(repre)
+
+#to generate responses, create a Response instance that includes "question" as one of the attributes.
+#Make sure the "question" is a Question instance object.
+class Response(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.String(500))
+    timestamp = db.Column(db.DateTime)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    question_id = db.Column(db.Integer, db.ForeignKey('question.id'))
+    def hide(self):
+        self.public = 'false'
+        db.session.commit()
+    def unhide(self):
+        self.public = 'true'
+        db.session.commit()
+    def __repr__(self):
+        repre = "%r" % self.body
+        return str(repre)
+
+#make sure to create an instance of QOTD and set the qotd variable to "1"
+#the qotd variable stands for the question id that will be displayed by default
+class QOTD(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    qotd = db.Column(db.Integer)
+    timestamp = db.Column(db.DateTime)
+    def set(self, identifier):
+        self.qotd = int(identifier)
+        db.session.commit()
+    def __repr__(self):
+        repre = "%r" % self.qotd
         return str(repre)
