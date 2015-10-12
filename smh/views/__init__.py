@@ -51,13 +51,12 @@ def send():
 @app.route('/xyadmin', methods=['GET', 'POST'])
 @login_required
 def admindash():
-    admin = User.query.filter_by(nickname='gogosanka').first()
-    user = admin.nickname
+    user = User.query.filter_by(nickname='admin').first()
     form = QuestionForm()
     questions = Question.query.all()
     question_id = QOTD.query.get(1)
     current_q = Question.query.filter_by(id=question_id.qotd).first()
-    if current_user.nickname == admin.nickname:
+    if user and (current_user.nickname == user.nickname):
         if request.method == 'POST':
             if form.validate_on_submit():
                 body = form.question.data
@@ -72,10 +71,9 @@ def admindash():
 @app.route('/set_question/<question_id>', methods=['GET'])
 @login_required
 def admindash2(question_id):
-    admin = User.query.filter_by(nickname='gogosanka').first()
-    user = admin.nickname
+    user = User.query.filter_by(nickname='admin').first()
     question_id = int(question_id)
-    if current_user.nickname == admin.nickname:
+    if user and (current_user.nickname == user.nickname):
         qotd = QOTD.query.get(1)
         qotd.set(question_id)
         flash('Changed question!')
@@ -85,9 +83,8 @@ def admindash2(question_id):
 @app.route('/delete_question/<question_id>', methods=['GET'])
 @login_required
 def admindash3(question_id):
-    admin = User.query.filter_by(nickname='gogosanka').first()
-    user = admin.nickname
-    if current_user.nickname == admin.nickname:
+    user = User.query.filter_by(nickname='admin').first()
+    if user and (current_user.nickname == user.nickname):
         blogic.delete_question(question_id)
         flash('Changed question!')
         return redirect(url_for('admindash'))
